@@ -1,8 +1,9 @@
-from picamera.array import PiRGBArray
 from picamera import PiCamera
-import time
+from time import sleep
+import numpy as np
+from threading import Thread, Lock
 
-class Camera:
+class Camera(Thread):
     """
     Simple class to capture the raw pi camera
     
@@ -12,21 +13,50 @@ class Camera:
 
     Methods
     ----
-    capture()
-        Use capture to load a new image into an array
+    run()
+        Captures image and loads it into array
     """
-    def __init__(self):
-        #Open camera feed and declare array to capture object
+    def __init__(self, camsize = (320,240), framerate=8):
+        Thread.__init__(self)
+        
+        #Store framerate
+        self.camsize = camsize
+        self.width = camsize[0]
+        self.height = camsize[1]
+        self.framerate = framerate
+        
+        #Main camera object, set camera to 320x240 by default
         self.camera = PiCamera()
-        self.rawCapture = PiRGBArray(self.camera)
-        time.sleep(0.1)
+        self.camera.resolution = (self.camsize)
+        self.camera.framerate = framerate
+        
+        #mutex for image
+        self.mutex = Lock()
+        
+        #exit flag to leave run thread
+        self.exit = False
+        
+        #initialize empty array for storing image later
+        self.image = np.empty((self.height * self.width * 3,), dtype=np.uint8)
+        sleep(0.2)
+        
 
-        #Settings for camera
-        self.camera.capture(self.rawCapture,format="bgr")
-
-    def capture(self):
+    def run(self):
         """
         Returns an object holding the bgr array from the pi camera
         Send this into cv stream
         """
-        return self.rawCapture.array
+        while self.exit==False:
+            #protect image from being corrupted
+            self.mutex.acquire()
+            
+            #capture camera and refresh self.image to hold array of values
+            try:
+                self.camera.capture(self.image,'bgr')
+                self.image = self.image.reshape((self.height, self.width, 3))
+            
+            #release mutex
+            finally:
+                self.mutex.release()
+            
+            sleep(1/self.framerate)
