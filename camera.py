@@ -7,6 +7,8 @@ class Camera(Thread):
     """
     Simple class to capture the raw pi camera
     
+    Inspired by: https://picamera.readthedocs.io/en/release-1.13/recipes2.html#:~:text=4.1.-,Capturing%20to%20a%20numpy%20array,written%20directly%20to%20the%20object.
+    
     Attributes
     -----
     none
@@ -59,4 +61,4 @@ class Camera(Thread):
             finally:
                 self.mutex.release()
             
-            sleep(1/self.framerate)
+            sleep(1.0/self.framerate)
